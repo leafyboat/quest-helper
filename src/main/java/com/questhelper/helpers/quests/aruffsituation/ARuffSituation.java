@@ -287,6 +287,7 @@ public class ARuffSituation extends BasicQuestHelper
 			cInspectDen,
 			interactWithStrayDogInDen,
 			followStrayDogToCooksGuild,
+			interactWithStrayDogAtCooksGuild,
 			talkToStrayDog
 		)));
 
