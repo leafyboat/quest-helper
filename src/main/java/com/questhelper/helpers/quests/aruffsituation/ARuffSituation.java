@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026, Zoinkwiz <https://github.com/Zoinkwiz>
+ * Copyright (c) 2026, leafyboat <https://github.com/leafyboat>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@ import com.questhelper.requirements.Requirement;
 import com.questhelper.requirements.item.ItemRequirement;
 import com.questhelper.requirements.player.SkillRequirement;
 import com.questhelper.requirements.var.VarbitRequirement;
+import com.questhelper.requirements.var.VarplayerRequirement;
 import com.questhelper.rewards.ExperienceReward;
 import com.questhelper.rewards.QuestPointReward;
 import com.questhelper.rewards.UnlockReward;
@@ -47,6 +48,7 @@ import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.NpcID;
+import net.runelite.api.gameval.VarPlayerID;
 
 /**
  * The OSRS wiki was referenced for this guide: https://oldschool.runescape.wiki/w/A_Ruff_Situation
@@ -70,6 +72,7 @@ public class ARuffSituation extends BasicQuestHelper
 	VarbitRequirement needsToInspectRoughBedding;
 	VarbitRequirement needsToInspectChewedBox;
 	VarbitRequirement needsToInspectTornNewspaper;
+	VarplayerRequirement strayDogFollowing;
 
 	// Steps
 	NpcStep talkToTalia;
@@ -79,6 +82,9 @@ public class ARuffSituation extends BasicQuestHelper
 	ConditionalStep cInspectDen;
 	NpcStep interactWithStrayDogInDen;
 	NpcStep followStrayDogToCooksGuild;
+	NpcStep interactWithStrayDogAtCooksGuild;
+	NpcStep talkToStrayDog;
+	ConditionalStep cTalkToPicklenose;
 	NpcStep talkToPicklenose;
 	DetailedQuestStep makeStuffedDog;
 	NpcStep talkToPicklenoseAgain;
@@ -115,6 +121,8 @@ public class ARuffSituation extends BasicQuestHelper
 		needsToInspectRoughBedding = new VarbitRequirement(15890, 0);
 		needsToInspectChewedBox = new VarbitRequirement(15893, 0);
 		needsToInspectTornNewspaper = new VarbitRequirement(15891, 0);
+
+		strayDogFollowing = new VarplayerRequirement(VarPlayerID.FOLLOWER_NPC, 16505, 16);
 	}
 
 	public void setupSteps()
@@ -150,12 +158,24 @@ public class ARuffSituation extends BasicQuestHelper
 		cInspectDen.addStep(needsToInspectRoughBedding, inspectRoughBedding);
 
 		followStrayDogToCooksGuild = new NpcStep(this, 16504, new WorldPoint(3146, 3456, 0),
-			"Follow the stray dog until a cutscene triggers just north of the Cooks' Guild.");
+			"Follow the stray dog from the den until a cutscene triggers north of the Cooks' Guild.");
 		followStrayDogToCooksGuild.addAlternateNpcs(16505);
+		followStrayDogToCooksGuild.setMaxRoamRange(100);
+
+		interactWithStrayDogAtCooksGuild = new NpcStep(this, 16504, new WorldPoint(3146, 3456, 0),
+			"Interact with the stray dog to watch the cutscene.");
+		interactWithStrayDogAtCooksGuild.addAlternateNpcs(16505);
+
+		talkToStrayDog = new NpcStep(this, 16504, new WorldPoint(3146, 3456, 0),
+			"Talk to the stray dog. Dismiss any pet you have out first.");
+		talkToStrayDog.addAlternateNpcs(16505);
 
 		talkToPicklenose = new NpcStep(this, 16523, new WorldPoint(3130, 3436, 0),
-			"Talk to Picklenose south-west of the Cooks' Guild. The stray dog must be following you, " +
-				"so dismiss any pet you have out first.");
+			"Talk to Picklenose south-west of the Cooks' Guild.");
+
+		cTalkToPicklenose = new ConditionalStep(this, talkToStrayDog,
+			"Talk to Picklenose south-west of the Cooks' Guild with the stray dog following you.");
+		cTalkToPicklenose.addStep(strayDogFollowing, talkToPicklenose);
 
 		makeStuffedDog = new DetailedQuestStep(this,
 			"Use the grain on the fur to make a stuffed dog.",
@@ -191,7 +211,10 @@ public class ARuffSituation extends BasicQuestHelper
 		steps.put(25, cInspectDen);
 		steps.put(30, interactWithStrayDogInDen);
 		steps.put(35, followStrayDogToCooksGuild);
-		steps.put(55, talkToPicklenose);
+		steps.put(40, interactWithStrayDogAtCooksGuild);
+		steps.put(45, talkToStrayDog);
+		steps.put(50, talkToStrayDog);
+		steps.put(55, cTalkToPicklenose);
 		steps.put(60, makeStuffedDog);
 		steps.put(65, talkToPicklenoseAgain);
 		steps.put(80, followStrayDogToWall);
@@ -263,11 +286,12 @@ public class ARuffSituation extends BasicQuestHelper
 			followStrayDogToDen,
 			cInspectDen,
 			interactWithStrayDogInDen,
-			followStrayDogToCooksGuild
+			followStrayDogToCooksGuild,
+			talkToStrayDog
 		)));
 
 		sections.add(new PanelDetails("Bargaining with the goblins", List.of(
-			talkToPicklenose,
+			cTalkToPicklenose,
 			makeStuffedDog,
 			talkToPicklenoseAgain
 		), needleOrCostumeNeedle, thread, fur, grain));
