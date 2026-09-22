@@ -171,8 +171,7 @@ public class ARuffSituation extends BasicQuestHelper
 			"Talk to the stray dog. Dismiss any pet you have out first.");
 		talkToStrayDog.addAlternateNpcs(16505);
 
-		talkToPicklenose = new NpcStep(this, 16523, new WorldPoint(3130, 3436, 0),
-			"Talk to Picklenose south-west of the Cooks' Guild.");
+		talkToPicklenose = new NpcStep(this, 16523, new WorldPoint(3130, 3436, 0), "");
 
 		var talkToStrayDogInDen = new NpcStep(this, NpcID.DOGQ_DOG_STRAY, new WorldPoint(3197, 3415, 0), "Talk to the stray dog in its den, west of the Varrock clothes shop.");
 		cTalkToPicklenose = new ConditionalStep(this, talkToStrayDog,
