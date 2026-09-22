@@ -49,6 +49,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 
 /**
  * The OSRS wiki was referenced for this guide: https://oldschool.runescape.wiki/w/A_Ruff_Situation
@@ -173,9 +174,13 @@ public class ARuffSituation extends BasicQuestHelper
 		talkToPicklenose = new NpcStep(this, 16523, new WorldPoint(3130, 3436, 0),
 			"Talk to Picklenose south-west of the Cooks' Guild.");
 
+		var talkToStrayDogInDen = new NpcStep(this, NpcID.DOGQ_DOG_STRAY, new WorldPoint(3197, 3415, 0), "Talk to the stray dog in its den, west of the Varrock clothes shop.");
 		cTalkToPicklenose = new ConditionalStep(this, talkToStrayDog,
 			"Talk to Picklenose south-west of the Cooks' Guild with the stray dog following you.");
 		cTalkToPicklenose.addStep(strayDogFollowing, talkToPicklenose);
+		var strayDogInDen = new VarbitRequirement(VarbitID.DOGQ_STRAY_FOLLOWER, 1);
+		cTalkToPicklenose.addStep(strayDogInDen, talkToStrayDogInDen);
+
 
 		makeStuffedDog = new DetailedQuestStep(this,
 			"Use the grain on the fur to make a stuffed dog.",
