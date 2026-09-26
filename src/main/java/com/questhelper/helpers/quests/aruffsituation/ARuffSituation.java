@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2026, leafyboat <https://github.com/leafyboat>
+ * Copyright (c) 2026, pajlada <rasmus.karlsson@pajlada.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +31,7 @@ import com.questhelper.questhelpers.BasicQuestHelper;
 import com.questhelper.requirements.Requirement;
 import com.questhelper.requirements.item.ItemRequirement;
 import com.questhelper.requirements.player.SkillRequirement;
+import static com.questhelper.requirements.util.LogicHelper.not;
 import com.questhelper.requirements.var.VarbitRequirement;
 import com.questhelper.requirements.var.VarplayerRequirement;
 import com.questhelper.rewards.ExperienceReward;
@@ -52,7 +54,7 @@ import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 
 /**
- * The OSRS wiki was referenced for this guide: https://oldschool.runescape.wiki/w/A_Ruff_Situation
+ * <a href="https://oldschool.runescape.wiki/w/A_Ruff_Situation">The OSRS wiki guide</a> was referenced for this guide.
  */
 public class ARuffSituation extends BasicQuestHelper
 {
@@ -74,6 +76,10 @@ public class ARuffSituation extends BasicQuestHelper
 	VarbitRequirement needsToInspectChewedBox;
 	VarbitRequirement needsToInspectTornNewspaper;
 	VarplayerRequirement strayDogFollowing;
+	VarbitRequirement inCutscene;
+	ItemRequirement puppy1;
+	ItemRequirement puppy2;
+	ItemRequirement puppy3;
 
 	// Steps
 	NpcStep talkToTalia;
@@ -89,8 +95,30 @@ public class ARuffSituation extends BasicQuestHelper
 	NpcStep talkToPicklenose;
 	DetailedQuestStep makeStuffedDog;
 	NpcStep talkToPicklenoseAgain;
+	NpcStep talkToPicklenoseAgainAfterHandingHimTheStuffedDog;
+	NpcStep pickUpStrayPuppy2;
+	NpcStep talkToStrayDogOutsideCooksGuild;
 	NpcStep followStrayDogToWall;
+	DetailedQuestStep followStrayDogToWallWatchCutscene;
+	ConditionalStep cFollowStrayDogToWallWatchCutscene;
+
+	// 90 + 95 + 100
 	NpcStep killOutlaws;
+	ConditionalStep cKillOutlaws;
+
+	// 105
+	NpcStep talkToStrayDogAfterCollectingLastPuppy;
+
+	// 110
+	NpcStep pickupPuppy1FromDen;
+	NpcStep pickupPuppy2FromDen;
+	NpcStep pickupPuppy3FromDen;
+	NpcStep talkToStrayDogInDenAfterCollectingLastPuppy;
+	ConditionalStep cGetPuppies;
+
+	// 115
+	NpcStep talkToTaliaWithPuppies;
+	ConditionalStep cTalkToTaliaWithPuppies;
 
 	@Override
 	protected void setupRequirements()
@@ -119,11 +147,16 @@ public class ARuffSituation extends BasicQuestHelper
 		food = new ItemRequirement("Food", -1, -1);
 		food.setDisplayItemId(BankSlotIcons.getFood());
 
+		puppy1 = new ItemRequirement("Puppy labrador", ItemID.DOGQ_PUPPY_ONE_OBJECT);
+		puppy2 = new ItemRequirement("Puppy pug", ItemID.DOGQ_PUPPY_TWO_OBJECT);
+		puppy3 = new ItemRequirement("Puppy spaniel", ItemID.DOGQ_PUPPY_THREE_OBJECT);
+
 		needsToInspectRoughBedding = new VarbitRequirement(15890, 0);
 		needsToInspectChewedBox = new VarbitRequirement(15893, 0);
 		needsToInspectTornNewspaper = new VarbitRequirement(15891, 0);
 
 		strayDogFollowing = new VarplayerRequirement(VarPlayerID.FOLLOWER_NPC, 16505, 16);
+		inCutscene = new VarbitRequirement(VarbitID.CUTSCENE_STATUS, 1);
 	}
 
 	public void setupSteps()
@@ -188,15 +221,43 @@ public class ARuffSituation extends BasicQuestHelper
 
 		talkToPicklenoseAgain = new NpcStep(this, 16523, new WorldPoint(3130, 3436, 0),
 			"Talk to Picklenose again to trade the stuffed dog for the puppy.", stuffedDog);
+		talkToPicklenoseAgainAfterHandingHimTheStuffedDog = new NpcStep(this, 16523, new WorldPoint(3130, 3436, 0), "Talk to Picklenose south-west of the cook's guild after handing him the stuffed dog.");
+		talkToPicklenoseAgain.addSubSteps(talkToPicklenoseAgainAfterHandingHimTheStuffedDog);
+
+		pickUpStrayPuppy2 = new NpcStep(this, NpcID.DOGQ_PUPPY_TWO, new WorldPoint(3131, 3435, 0), "Pick up the stray puppy south-west of the cook's guild.");
+
+		talkToStrayDogOutsideCooksGuild = new NpcStep(this, NpcID.DOGQ_DOG_STRAY, new WorldPoint(3132, 3436, 0), "Talk to the stray dog south-west of the cook's guild to see if she can sniff out the last puppy.");
 
 		followStrayDogToWall = new NpcStep(this, 16504, new WorldPoint(3136, 3467, 0),
 			"Interact with the stray dog and follow her until a cutscene triggers by the gap in the wall " +
 				"north of the Cooks' Guild.");
 		followStrayDogToWall.addAlternateNpcs(16505);
+		followStrayDogToWall.addDialogStep("Yes.");
 
-		killOutlaws = new NpcStep(this, 16528, new WorldPoint(3135, 3475, 0),
-			"Kill both outlaws (level 22 and level 23), then watch the cutscene.", true, combatGear, food);
+		followStrayDogToWallWatchCutscene = followStrayDogToWall.cutscene();
+
+		killOutlaws = new NpcStep(this, 16528, new WorldPoint(3135, 3475, 0), "Kill both outlaws (level 22 and level 23), then watch the cutscene.", true, combatGear, food);
 		killOutlaws.addAlternateNpcs(16527);
+
+		cFollowStrayDogToWallWatchCutscene = new ConditionalStep(this, followStrayDogToWall);
+		cFollowStrayDogToWallWatchCutscene.addStep(inCutscene, followStrayDogToWallWatchCutscene);
+		cKillOutlaws = new ConditionalStep(this, followStrayDogToWall);
+		cKillOutlaws.addStep(inCutscene, killOutlaws.cutscene());
+		pickupPuppy1FromDen = new NpcStep(this, NpcID.DOGQ_PUPPY_ONE, new WorldPoint(3195, 3415, 0), "Pick up the puppy labrador from the den west of the Varrock apothecary.");
+		pickupPuppy2FromDen = new NpcStep(this, NpcID.DOGQ_PUPPY_TWO, new WorldPoint(3196, 3416, 0), "Pick up the puppy pug from the den west of the Varrock apothecary.");
+		pickupPuppy3FromDen = new NpcStep(this, NpcID.DOGQ_PUPPY_THREE, new WorldPoint(3196, 3413, 0), "Pick up the puppy spaniel from the den west of the Varrock apothecary.");
+		talkToStrayDogAfterCollectingLastPuppy = new NpcStep(this, NpcID.DOGQ_DOG_STRAY, new WorldPoint(3136, 3477, 0), "Talk to the stray dog north-west of the cook's guild.");
+		talkToStrayDogInDenAfterCollectingLastPuppy = new NpcStep(this, NpcID.DOGQ_DOG_STRAY, new WorldPoint(3197, 3414, 0), "");
+		cGetPuppies = new ConditionalStep(this, talkToStrayDogInDenAfterCollectingLastPuppy, "With the three puppies in your inventory, talk to the stray dog in the den west of the Varrock apothecary.", puppy1, puppy2, puppy3);
+		cGetPuppies.addStep(not(puppy1), pickupPuppy1FromDen);
+		cGetPuppies.addStep(not(puppy2), pickupPuppy2FromDen);
+		cGetPuppies.addStep(not(puppy3), pickupPuppy3FromDen);
+
+		talkToTaliaWithPuppies = new NpcStep(this, NpcID.DOGQ_TALIA, new WorldPoint(3037, 3457, 0), "");
+		cTalkToTaliaWithPuppies = new ConditionalStep(this, talkToTaliaWithPuppies, "With the three puppies in your inventory, talk to Talia at the dog shelter south-west of the Edgeville Monastery.", puppy1, puppy2, puppy3);
+		cTalkToTaliaWithPuppies.addStep(not(puppy1), pickupPuppy1FromDen);
+		cTalkToTaliaWithPuppies.addStep(not(puppy2), pickupPuppy2FromDen);
+		cTalkToTaliaWithPuppies.addStep(not(puppy3), pickupPuppy3FromDen);
 	}
 
 	@Override
@@ -221,8 +282,17 @@ public class ARuffSituation extends BasicQuestHelper
 		steps.put(55, cTalkToPicklenose);
 		steps.put(60, makeStuffedDog);
 		steps.put(65, talkToPicklenoseAgain);
+		steps.put(66, talkToPicklenoseAgainAfterHandingHimTheStuffedDog);
+		steps.put(70, pickUpStrayPuppy2);
+		steps.put(75, talkToStrayDogOutsideCooksGuild);
 		steps.put(80, followStrayDogToWall);
+		steps.put(85, cFollowStrayDogToWallWatchCutscene);
 		steps.put(90, killOutlaws);
+		steps.put(95, cKillOutlaws);
+		steps.put(100, cKillOutlaws);
+		steps.put(105, talkToStrayDogAfterCollectingLastPuppy);
+		steps.put(110, cGetPuppies);
+		steps.put(115, cTalkToTaliaWithPuppies);
 
 		return steps;
 	}
@@ -298,13 +368,21 @@ public class ARuffSituation extends BasicQuestHelper
 		sections.add(new PanelDetails("Bargaining with the goblins", List.of(
 			cTalkToPicklenose,
 			makeStuffedDog,
-			talkToPicklenoseAgain
+			talkToPicklenoseAgain,
+			pickUpStrayPuppy2
 		), needleOrCostumeNeedle, thread, fur, grain));
 
 		sections.add(new PanelDetails("The last puppy", List.of(
+			talkToStrayDogOutsideCooksGuild,
 			followStrayDogToWall,
 			killOutlaws
 		), combatGear, food));
+
+		sections.add(new PanelDetails("Puppy reunion", List.of(
+			talkToStrayDogAfterCollectingLastPuppy,
+			cGetPuppies,
+			cTalkToTaliaWithPuppies
+		)));
 
 		return sections;
 	}
